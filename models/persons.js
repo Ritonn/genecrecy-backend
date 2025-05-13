@@ -1,15 +1,20 @@
 const mongoose = require('mongoose');
 
 const personsSchema = mongoose.Schema({
-  firstname: String,
-  lastname: String,
-  birthday: Date,
-  dead: Boolean,
-  deathdate: Date,
+  id: Number,
+  prenom: String,
+  nom: String,
+  estNeFamille: Boolean,
+  idGeneration: Number,
+  dateNaissance: Date,
+  lieuNaissance: String,
+  estDecede: Boolean,
+  dateDeces: Date,
   estMarie: Boolean,
-  idConjoint: { type: mongoose.Schema.Types.ObjectId, ref: 'persons' },
-  isBornFamily: Boolean,
-  idFamille: { type: mongoose.Schema.Types.ObjectId, ref: 'mariages' },
+  idPere: { type: mongoose.Schema.Types.ObjectId, ref: 'persons' },
+  idMere: { type: mongoose.Schema.Types.ObjectId, ref: 'persons' },
+  enfants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'persons' }],
+  conjoints: [{ type: mongoose.Schema.Types.ObjectId, ref: 'persons' }],
 }, { timestamps: true });
 
 const Person = mongoose.model('person', personsSchema);
