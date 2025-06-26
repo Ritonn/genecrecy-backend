@@ -4,9 +4,6 @@ var router = express.Router();
 require('../models/connection');
 const Person = require('../models/persons');
 
-// router.get('/', (req, res) => {
-    
-// })
 
 router.post('/', (req, res) => {
 //   if (!checkBody(req.body, ['username', 'password'])) {
