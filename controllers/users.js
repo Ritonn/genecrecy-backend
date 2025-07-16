@@ -34,7 +34,7 @@ const signIn = async (req, res) => {
       token: user.token,
       _id: user._id,
       username: user.username,
-      roles: user.roles
+      roles: [...user.roles]
     });
   } else {
     res.json({ error: "User not found or wrong password" });
