@@ -73,9 +73,29 @@ const Person = require('../models/persons');
 //
 
 const getPeople = async() => {
-    return await Person.find({})
+    return await Person.find({});
+}
+
+const newPerson = async() => {
+    Person.findOne({ prenom: req.body.firstname, nom: req.body.lastname, dateNaissance: req.body.birthdate })
+        .then(data => {
+        if (data === null) {
+            const newPerson = new Person({
+            prenom: req.body.firstname,
+            nom: req.body.lastname,
+            estNeFamille: req.body.estNeFamille,
+            dateNaisance: req.body.dateNaissance,
+            estDecede: req.body.estDecede,
+            dateDeces: req.body.dateDeces,
+            estMarie: req.body.estMarie,
+            dateMariage: req.body.dateMariage,
+            });
+
+            return newPerson.save();
+        }
+    })
 }
 
 
 
-module.exports = { getPeople };
+module.exports = { getPeople, newPerson };
