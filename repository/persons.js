@@ -73,9 +73,50 @@ const Person = require('../models/persons');
 //
 
 const getPeople = async() => {
-    return await Person.find({})
+    return await Person.find({});
+}
+
+const findPersonId = async (prenom, nom) => {
+
+    const prenomRegex = new RegExp(prenom, 'i');
+    const nomRegex = new RegExp(nom, 'i');
+
+    const data = await Person.find({
+        prenom: { $regex: prenomRegex }, 
+        nom: { $regex: nomRegex },
+    });
+
+    console.log('Personnes trouvées : ', data);
+
+    if (!data) {
+        return
+    }
+    
+    return data;
+}
+
+const newPerson = async(prenom, nom, dateNaissance, pere, mere) => {
+
+    const peopleCheck = await Person.findOne({ prenom, nom, status: "pending"});
+        if (peopleCheck) {
+            return null;
+        } else {
+            const newPerson = new Person({
+            prenom: req.body.firstname,
+            nom: req.body.lastname,
+            estNeFamille: true,
+            dateNaisance: req.body.dateNaissance,
+            estDecede: false,
+            dateDeces: null,
+            estMarie: false,
+            dateMariage: req.body.dateMariage,
+            });
+
+            return newPerson.save();
+        }
+
 }
 
 
 
-module.exports = { getPeople };
+module.exports = { getPeople, newPerson, findPersonId };

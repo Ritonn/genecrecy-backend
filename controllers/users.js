@@ -1,6 +1,6 @@
 const { checkBody } = require('../modules/checkBody');
 const bcrypt = require('bcrypt');
-const { createUser, checkUser} = require('../repository/users');
+const { createUser, checkUser, findUserbyUsername} = require('../repository/users');
 
 const signUp = async (req, res) => {
   const data = checkBody(req.body, ['username', 'email', 'password']);
@@ -26,13 +26,20 @@ const signIn = async (req, res) => {
     return;
   }
 
-  User.findOne({ username: req.body.username }).then(data => {
-    if (data && bcrypt.compareSync(req.body.password, data.password)) {
-      res.json({ result: true, token: data.token });
-    } else {
-      res.json({ result: false, error: 'Utilisateur inexistant ou mauvais mot de passe.' });
-    }
-  });
+  const user = await findUserbyUsername(req.body.username);
+
+  if (user && bcrypt.compareSync(req.body.password, user.password)) {
+    res.json({
+      result: true,
+      token: user.token,
+      _id: user._id,
+      username: user.username,
+      roles: [...user.roles]
+    });
+  } else {
+    res.json({ error: "User not found or wrong password" });
+  }
+;
 }
 
 module.exports = {signIn, signUp};

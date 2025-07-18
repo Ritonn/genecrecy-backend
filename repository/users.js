@@ -36,4 +36,9 @@ const createUser = async (username, email, password) => {
 
 }
 
-module.exports = { createUser, checkUser};
+const findUserbyUsername = async (username) => {
+    const data = await User.findOne({ username });
+    return data;
+}
+
+module.exports = { createUser, checkUser, findUserbyUsername};
