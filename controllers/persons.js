@@ -1,41 +1,41 @@
-const { getPeople, newPerson, findPersonId } = require('../repository/persons');
+const { getPeople, newPerson, findPersonId, pendingPeople } = require('../repository/persons');
 
 const getFamily = async (req, res) => {
     const family = await getPeople();
     if (!family) {
-        res.json({ result: false, error: "No people found"})
+        res.json({ result: false, error: "No people found" })
     } else {
-        res.json({result: true, family})
+        res.json({ result: true, family })
     }
 }
 
 const getPersonId = async (req, res) => {
 
-    const {prenom, nom} = req.body;
-    
+    const { prenom, nom } = req.body;
+
     if (!prenom || !nom) {
-        res.status(400).json({ error: "Un ou plusieurs champs manquant(s)"})
+        res.status(400).json({ error: "Un ou plusieurs champs manquant(s)" })
     }
 
     const data = await findPersonId(prenom, nom);
 
     if (!data) {
-        res.json({result: false, error: "Aucune personne trouvée"})
+        res.json({ result: false, error: "Aucune personne trouvée" })
         return;
-        
+
     } else {
 
         let filteredData = [];
-            for (let i = 0; i< data.length; i++) {
-                const obj = {
-                    id: data[i]._id,
-                    prenom: data[i].prenom,
-                    nom: data[i].nom,
-                    dateNaissance: data[i].dateNaissance.slice(0,10)
-                }
-                filteredData.push(obj);
+        for (let i = 0; i < data.length; i++) {
+            const obj = {
+                id: data[i]._id,
+                prenom: data[i].prenom,
+                nom: data[i].nom,
+                dateNaissance: data[i].dateNaissance.slice(0, 10)
             }
-        res.json({result: true, data: filteredData})
+            filteredData.push(obj);
+        }
+        res.json({ result: true, data: filteredData })
     }
 
 
@@ -43,19 +43,48 @@ const getPersonId = async (req, res) => {
 
 const submitPerson = async (req, res) => {
 
-    const {prenom, nom, dateNaissance, pere, mere} = req.body;
+    const {
+        prenom,
+        nom,
+        estNeFamille,
+        dateNaissance,
+        estDecede,
+        dateDeces,
+        estMarie,
+        dateMariage,
+        idPere,
+        idMere,
+        idConjoint
+    } = req.body;
 
     // Validation
-    if (!nom || !prenom || !dateNaissance || !parentIds || !Array.isArray(parentIds)) {
-      return res.status(400).json({ 
-        error: 'Données manquantes ou invalides' 
-      });
+    if (!nom || !prenom || !dateNaissance) {
+        return res.status(400).json({
+            error: 'Données manquantes ou invalides'
+        });
     }
 
-    const data = await newPerson(prenom, nom, dateNaissance, pere, mere);
+    const data = await newPerson(req.body);
 
+    if (!data) {
+        res.json({ result: false, error: "Aucune personne trouvée" })
+        return;
+
+    } else {
+        res.json({ result: true, data })
+    }
 
 }
 
+const getPendingPeople = async (req, res) => {
+    const people = await pendingPeople();
 
-module.exports = { getFamily, submitPerson, getPersonId };
+    if (!people) {
+        res.json( {error: "Aucun membre en attente de validation trouvé"})
+    }
+
+    res.json({result: true, data: people})
+}
+
+
+module.exports = { getFamily, submitPerson, getPersonId, getPendingPeople };

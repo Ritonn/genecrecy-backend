@@ -1,79 +1,20 @@
 const { ObjectId } = require('mongodb');
 const Person = require('../models/persons');
 
-// Extrait les attributs à afficher
-// function extractAttributes(person) {
-//   const excludedFields = ['_id', 'id', 'prenom', 'nom', 'enfants', 'conjoints', 'idPere', 'idMere'];
-//   const attributes = {};
 
-//   for (const [key, value] of Object.entries(person._doc)) {
-//     if (!excludedFields.includes(key)) {
-//       attributes[key] = value instanceof Date
-//         ? value.toISOString().split('T')[0]
-//         : value;
-//     }
-//   }
+const getPeople = async () => {
+    const people = await Person.find({
+        $or : [
+            {status: {$exists: false}},
+            {status: "validated"}
+        ]
+    });
+    return people;
+}
 
-//   return attributes;
-// }
-
-// Fonction récursive
-// async function buildTree(id) {
-//   const person = await Person.findById(id);
-
-//   if (!person) return null;
-
-//     const normalizeId = (id) =>
-//     typeof id === 'object' && id.$oid ? new ObjectId(id.$oid) :
-//     typeof id === 'string' ? new ObjectId(id) :
-//     id;
-
-//     // Conjoints : récupérer chaque document
-//     const conjointsDocs = await Promise.all(
-//         (person.conjoints || []).map(cid => Person.findOne({ _id: cid }))
-//     );
-
-//     const conjointNodes = conjointsDocs
-//         .filter(Boolean)
-//         .map(conjoint => ({
-//         name: `${conjoint.prenom} ${conjoint.nom}`,
-//         attributes: extractAttributes(conjoint),
-//         _conjoint: true, // flag pour personnaliser l'affichage
-//         children: [],
-//         }));
-
-//     const children = await Promise.all(
-//     (person.enfants || []).map((childId) => buildTree(normalizeId(childId)))
-//     );
-
-
-//     return {
-//     name: `${person.prenom || ''} ${person.nom || ''}`,
-//     attributes: extractAttributes(person),
-//     conjointData: conjointsDocs[0] ? {
-//         name: `${conjointsDocs[0].prenom} ${conjointsDocs[0].nom}`,
-//         attributes: extractAttributes(conjointsDocs[0])
-//     } : null,
-//     children: children.filter(Boolean),
-//     };
-// }
-
-// Handler Express
-// async function handler(req, res) {
-//   const { id } = req.params;
-
-//   try {
-//     const tree = await buildTree(id);
-//     console.log(tree);
-//     res.status(200).json(tree);
-//   } catch (e) {
-//     res.status(500).json({ error: e.message });
-//   }
-// 
-//
-
-const getPeople = async() => {
-    return await Person.find({});
+const pendingPeople = async () => {
+    return await Person.find({status: "pending"})
+        .populate('idPere idMere enfants conjoints');
 }
 
 const findPersonId = async (prenom, nom) => {
@@ -82,7 +23,7 @@ const findPersonId = async (prenom, nom) => {
     const nomRegex = new RegExp(nom, 'i');
 
     const data = await Person.find({
-        prenom: { $regex: prenomRegex }, 
+        prenom: { $regex: prenomRegex },
         nom: { $regex: nomRegex },
     });
 
@@ -91,32 +32,95 @@ const findPersonId = async (prenom, nom) => {
     if (!data) {
         return
     }
-    
+
     return data;
 }
 
-const newPerson = async(prenom, nom, dateNaissance, pere, mere) => {
+const newPerson = async (person) => {
 
-    const peopleCheck = await Person.findOne({ prenom, nom, status: "pending"});
+    try {
+        // Extraire tous les champs de l'objet person
+        const {
+            prenom,
+            nom,
+            estNeFamille,
+            dateNaissance,
+            estDecede,
+            dateDeces,
+            estMarie,
+            dateMariage,
+            idPere,
+            idMere,
+            idConjoint
+        } = person ;
+
+        const peopleCheck = await Person.findOne({ prenom, nom, status: "pending" });
         if (peopleCheck) {
             return null;
         } else {
-            const newPerson = new Person({
-            prenom: req.body.firstname,
-            nom: req.body.lastname,
-            estNeFamille: true,
-            dateNaisance: req.body.dateNaissance,
-            estDecede: false,
-            dateDeces: null,
-            estMarie: false,
-            dateMariage: req.body.dateMariage,
-            });
+            // Validation des IDs de référence (optionnel mais recommandé)
+            const validationPromises = [];
+            
+            if (idPere) {
+                validationPromises.push(Person.findById(idPere));
+            }
+            if (idMere) {
+                validationPromises.push(Person.findById(idMere));
+            }
+            if (idConjoint) {
+                validationPromises.push(Person.findById(idConjoint));
+            }
+            
+            // Vérifier que tous les IDs référencés existent
+            if (validationPromises.length > 0) {
+                const results = await Promise.all(validationPromises);
+                const hasInvalidRef = results.some(result => result === null);
+                
+                if (hasInvalidRef) {
+                    throw new Error('Une ou plusieurs références d\'ID sont invalides');
+                }
+            }
 
-            return newPerson.save();
+            let generation = 0;
+            if (person.estNeFamille) {
+                const pere = await Person.findById(idPere);
+                generation = pere.idGeneration + 1;
+            } else {
+                const conjoint = await Person.findById(idConjoint);
+                generation = conjoint.idGeneration;
+            }
+            
+            
+            // Créer l'objet complet avec tous les champs + status "pending"
+            const personWithStatus = {
+                prenom,
+                nom,
+                estNeFamille,
+                idGeneration: generation,
+                dateNaissance,
+                estDecede,
+                dateDeces,
+                estMarie,
+                dateMariage,
+                idPere: idPere || null,
+                idMere: idMere || null,
+                conjoints: [idConjoint] || null,
+                status: "pending"
+            };
+
+            // Créer une nouvelle instance de Person avec les données complètes
+            const newPersonInstance = new Person(personWithStatus);
+
+            // Sauvegarder en base de données
+            return await newPersonInstance.save();
         }
+    } catch (error) {
+        console.error('Erreur lors de la création de la personne:', error);
+        throw error; // Propager l'erreur pour la gestion dans le controller
+    }
 
 }
 
 
 
-module.exports = { getPeople, newPerson, findPersonId };
+module.exports = { getPeople, newPerson, findPersonId, pendingPeople };
