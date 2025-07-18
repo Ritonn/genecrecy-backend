@@ -1,12 +1,23 @@
 const mongoose = require('mongoose');
 
+const STATUS = ["pending", "approved", "refused"]
+
 const personsSchema = mongoose.Schema({
   id: Number,
-  prenom: String,
-  nom: String,
+  prenom: {
+    type: String,
+    required: true
+  },
+  nom: {
+    type: String,
+  required: true
+  },
   estNeFamille: Boolean,
   idGeneration: Number,
-  dateNaissance: Date,
+  dateNaissance: {
+    type: String,
+    required: true
+  },
   lieuNaissance: String,
   estDecede: Boolean,
   dateDeces: Date,
@@ -15,6 +26,11 @@ const personsSchema = mongoose.Schema({
   idMere: { type: mongoose.Schema.Types.ObjectId, ref: 'persons' },
   enfants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'persons' }],
   conjoints: [{ type: mongoose.Schema.Types.ObjectId, ref: 'persons' }],
+  status: {
+    type: String,
+    required: false,
+    enum: STATUS,
+  }
 }, { timestamps: true });
 
 const Person = mongoose.model('person', personsSchema);

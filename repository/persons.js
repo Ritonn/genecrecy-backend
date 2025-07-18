@@ -76,26 +76,47 @@ const getPeople = async() => {
     return await Person.find({});
 }
 
-const newPerson = async() => {
-    Person.findOne({ prenom: req.body.firstname, nom: req.body.lastname, dateNaissance: req.body.birthdate })
-        .then(data => {
-        if (data === null) {
+const findPersonId = async (prenom, nom) => {
+
+    const prenomRegex = new RegExp(prenom, 'i');
+    const nomRegex = new RegExp(nom, 'i');
+
+    const data = await Person.find({
+        prenom: { $regex: prenomRegex }, 
+        nom: { $regex: nomRegex },
+    });
+
+    console.log('Personnes trouvées : ', data);
+
+    if (!data) {
+        return
+    }
+    
+    return data;
+}
+
+const newPerson = async(prenom, nom, dateNaissance, pere, mere) => {
+
+    const peopleCheck = await Person.findOne({ prenom, nom, status: "pending"});
+        if (peopleCheck) {
+            return null;
+        } else {
             const newPerson = new Person({
             prenom: req.body.firstname,
             nom: req.body.lastname,
-            estNeFamille: req.body.estNeFamille,
+            estNeFamille: true,
             dateNaisance: req.body.dateNaissance,
-            estDecede: req.body.estDecede,
-            dateDeces: req.body.dateDeces,
-            estMarie: req.body.estMarie,
+            estDecede: false,
+            dateDeces: null,
+            estMarie: false,
             dateMariage: req.body.dateMariage,
             });
 
             return newPerson.save();
         }
-    })
+
 }
 
 
 
-module.exports = { getPeople, newPerson };
+module.exports = { getPeople, newPerson, findPersonId };
